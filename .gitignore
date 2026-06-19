@@ -1,0 +1,16 @@
+node_modules/
+.env
+
+uploads/
+public/temp/
+
+*.log
+npm-debug.log*
+
+dist/
+build/
+
+.DS_Store
+
+
+#  command         git rm --cached .env     this is for mongodburi cloudinary use krre h to ye krna pdega  console p hi
