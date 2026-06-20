@@ -16,7 +16,6 @@ const adminLogin = tryCatch(async (req, resp, next) => {
     if (!isMatch) return next(new Error("Invalid Secret Key",401));
 
 const token =jwt.sign( secretKey,process.env.ADMIN_SECRET_KEY)
-// const token =jwt.sign(secretKey,process.env.JWT_SECRET)
 
     resp.status(200).cookie("chattu-admin-token",token,{...cookieOptions,maxAge:1000*60*15})
     .json({
@@ -122,24 +121,25 @@ const allMessages = tryCatch(async (req, resp) => {
     console.log("chat =>", msg.chat);
   });
 
-  const transformedMessages = messages.map(
-    ({ _id, content, createdAt, attachments, sender, chat }) => ({
-      _id,
-      content,
-      attachments,
-      createdAt,
-      chat: chat._id,
-      groupChat: chat.groupChat,
-      sender: sender
-        ? {
-            _id: sender._id,
-            name: sender.name,
-            avatar: sender.avatar?.url || "",
-          }
-        : null,
-    }),
-  );
+  
 
+  const transformedMessages = messages.map(
+  ({ _id, content, createdAt, attachments, sender, chat }) => ({
+    _id,
+    content,
+    attachments,
+    createdAt,
+    chat: chat?._id,
+    groupChat: chat?.groupChat,
+    sender: sender
+      ? {
+          _id: sender._id,
+          name: sender.name,
+          avatar: sender.avatar?.url || "",
+        }
+      : null,
+  })
+);
   resp.status(200).json({
     success: true,
     messages: transformedMessages,
@@ -173,20 +173,23 @@ last7DaysMessages.forEach(message=>{
 
     const indexApprox= (today.getTime()-message.createdAt.getTime())/dayInMilliseconds;  // message createdAt se current date tak kitne din hue h ye calculate krne k liye
   const index= Math.floor(indexApprox)  
-//   messages[6- index]++  // messages array me index ke corresponding value ko increment krna h jisse hume last 7 days ke messages count mil jaye
 
     if (index >= 0 && index < 7) {
     messages[6 - index]++;
   }
 })
 
+
   resp.status(200).json({
-    success: true,
-    totalUsers: userCount,
-    totalChats: totalChatsCount,
-    totalMessages: messageCount,
-    messageChart:messages
-  });
+  success: true,
+  stats: {
+    usersCount: userCount,
+    totalChatsCount: totalChatsCount,
+    messagesCount: messageCount,
+    groupsCount: groupCount,
+    messagesChart: messages,
+  },
+});
 });
 
 

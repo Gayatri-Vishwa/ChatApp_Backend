@@ -35,8 +35,6 @@ const newUser = tryCatch(async (req, resp, next) => {
 
 const login = tryCatch(async (req, resp, next) => {
   const { username, password } = req.body;
-  console.log("username", username);
-  console.log("password", password);
 
   const user = await User.findOne({ username }).select("+password"); //password b select krna h
 
@@ -82,11 +80,14 @@ const searchUser = tryCatch(async (req, resp) => {
   //extracting frnds ,people i have chattted with this is for search user in search bar
   const allowUsersFromMyChats = myChats.map((chat) => chat.members).flat(); //flat krke sare members nikal liye array s
 
-  //all users except me and my friends
-  const allUserExceptMeAndFriends = await User.find({
-    _id: { $nin: allowUsersFromMyChats },
-    name: { $regex: name, $options: "i" },
-  }); //regex se name search krna h aur i se case insensitive krna h
+
+const excludedUsers = [...allowUsersFromMyChats, req.user];
+
+const allUserExceptMeAndFriends = await User.find({
+  _id: { $nin: excludedUsers },
+  name: { $regex: name, $options: "i" },
+});
+
 
   //modify the users to send only _id,name and avatar url
   const users = allUserExceptMeAndFriends.map(({ _id, name, avatar }) => ({
@@ -94,6 +95,8 @@ const searchUser = tryCatch(async (req, resp) => {
     name,
     avatar: avatar.url,
   }));
+
+
 
   return resp.status(200).json({
     success: true,
@@ -152,7 +155,7 @@ const sendFriendRequest = tryCatch(async (req, resp, next) => {
 
 const acceptFriendRequest = tryCatch(async (req, resp, next) => {
   const { requestId, action } = req.body;
-console.log(req.body);
+
 
 
   const request = await Request.findById(requestId)
@@ -176,7 +179,7 @@ console.log(req.body);
 
   if (!action) {
       await request.deleteOne();
-    console.log("rejected");
+  
   
     return resp.status(200).json({
       success: true,
@@ -191,7 +194,7 @@ console.log(req.body);
       name: `${request.sender.name} - ${request.receiver.name}`,
     }),
       request.deleteOne(), // IMPORTANT FIX
-    console.log("chat created with members", members),
+  
    
   ]);
 
@@ -233,19 +236,16 @@ const getMyFriends = tryCatch(async (req, resp) => {
     groupChat: false,
   }).populate("members", "name avatar");
 
-  // console.log("members",members)
-  // console.log("req.user",req.user)
+
   const friends = chats.map(({ members }) => {
     const otherUser = getOtherMember(members, req.user);
-    // if (!otherUser) return null;
+
     return {
       _id: otherUser._id,
       name: otherUser.name,
       avatar: otherUser.avatar.url,
     };
   });
-
-  // console.log("otherUser",otherUser)
 
   if (chatId) {
     const chat = await Chat.findById(chatId);

@@ -1,83 +1,85 @@
-import dotenv from "dotenv";
-dotenv.config({ path: "./.env" });
+
 import express from "express";
 import { connectDb } from "./utils/features.js";
+import dotenv from "dotenv";
 import { errorMiddleware } from "./middlewares/error.js";
 import cookieParser from "cookie-parser";
-import { createUser } from "./seeders/user.seed.js";
 import { Server } from "socket.io";
 import { createServer } from "http";
 import { v4 as uuid } from "uuid";
 import cors from "cors";
 import { v2 as cloudinary } from "cloudinary";
-// import { NEW_MESSAGE, NEW_MESSAGE_ALERT } from "./constants/event.js";
 import {
+  CHAT_JOINED,
+  CHAT_LEAVED,
   NEW_MESSAGE,
   NEW_MESSAGE_ALERT,
-  NEW_REQUEST,
+  ONLINE_USERS,
+  START_TYPING,
   STOP_TYPING,
-  START_TYPING
 } from "./constants/event.js";
 import { getSockets } from "./lib/helper.js";
 import { Message } from "./models/message.model.js";
-import { socketAuthenticator } from "./middlewares/auth.js";
 import { corsOptions } from "./constants/config.js";
+import { socketAuthenticator } from "./middlewares/auth.js";
 
-import adminRoute from "./routes/admin.routes.js";
 import userRoute from "./routes/user.routes.js";
 import chatRoute from "./routes/chat.routes.js";
+import adminRoute from "./routes/admin.routes.js";
 
-const MONGO_URI = process.env.MONGO_URI;
+dotenv.config({
+  path: "./.env",
+});
+
+const mongoURI = process.env.MONGO_URI;
 const port = process.env.PORT || 3000;
 const envMode = process.env.NODE_ENV.trim() || "PRODUCTION";
-const adminSecretKey = process.env.ADMIN_SECRET_KEY;
-const userSocketIDs = new Map(); //all active users
+const adminSecretKey = process.env.ADMIN_SECRET_KEY || "adsasdsdfsdfsdfd";
+const userSocketIDs = new Map();
+const onlineUsers = new Set();
 
-connectDb(MONGO_URI);
+connectDb(mongoURI);
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
 });
-
 
 const app = express();
 const server = createServer(app);
-const io = new Server(server, { cors: corsOptions });
-//using middlewares here
+const io = new Server(server, {
+  cors: corsOptions,
+});
 
-app.use(express.json()); //to access json data
-app.use(express.urlencoded({ extended: true }));
+app.set("io", io);
+
+// Using Middlewares Here
+app.use(express.json());
 app.use(cookieParser());
 app.use(cors(corsOptions));
 
-app.set("io",io)
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/chat", chatRoute);
 app.use("/api/v1/admin", adminRoute);
 
-app.get("/", (req, resp) => {
-  resp.send("hello........");
+app.get("/", (req, res) => {
+  res.send("Hello World");
 });
 
-// socket middleware for auth
 io.use((socket, next) => {
-  cookieParser()(socket.request, socket.request.res, async (err) => {
-    await socketAuthenticator(err, socket, next);
-  });
+  cookieParser()(
+    socket.request,
+    socket.request.res,
+    async (err) => await socketAuthenticator(err, socket, next)
+  );
 });
 
 io.on("connection", (socket) => {
-
   const user = socket.user;
- 
-
   userSocketIDs.set(user._id.toString(), socket.id);
 
-  //not working i think
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
-   
     const messageForRealTime = {
       content: message,
       _id: uuid(),
@@ -86,65 +88,64 @@ io.on("connection", (socket) => {
         name: user.name,
       },
       chat: chatId,
-      createdAt: new Date().toString(),
+      createdAt: new Date().toISOString(),
     };
-    const messageForDb = {
+
+    const messageForDB = {
       content: message,
       sender: user._id,
       chat: chatId,
     };
 
-    
-
-console.log("Emitting",messageForRealTime);
-
-
-    //jinko msg send krna h ve
-    const memberSockets = getSockets(members);
-
-    io.to(memberSockets).emit(NEW_MESSAGE, {
+    const membersSocket = getSockets(members);
+    io.to(membersSocket).emit(NEW_MESSAGE, {
       chatId,
       message: messageForRealTime,
     });
-    io.to(memberSockets).emit(NEW_MESSAGE_ALERT, { chatId });
+    io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
 
-    // console.log("NEW_MESSAGE", messageForRealTime);
     try {
-      await Message.create(messageForDb);
+      await Message.create(messageForDB);
     } catch (error) {
-      console.log(error);
+      throw new Error(error);
     }
   });
 
-  socket.on(START_TYPING,({members,chatId})=>{
-    // console.log("START typing");
+  socket.on(START_TYPING, ({ members, chatId }) => {
+    const membersSockets = getSockets(members);
+    socket.to(membersSockets).emit(START_TYPING, { chatId });
+  });
 
-    const memberSocket=getSockets(members);
-    socket.to(memberSocket).emit(START_TYPING,{chatId})
-    
-  })
+  socket.on(STOP_TYPING, ({ members, chatId }) => {
+    const membersSockets = getSockets(members);
+    socket.to(membersSockets).emit(STOP_TYPING, { chatId });
+  });
 
-  
-  socket.on(STOP_TYPING,({members,chatId})=>{
-    // console.log("STOP typing");
+  socket.on(CHAT_JOINED, ({ userId, members }) => {
+    onlineUsers.add(userId.toString());
 
-    const memberSocket=getSockets(members);
-    socket.to(memberSocket).emit(STOP_TYPING,{chatId})
-    
-  })
+    const membersSocket = getSockets(members);
+    io.to(membersSocket).emit(ONLINE_USERS, Array.from(onlineUsers));
+  });
+
+  socket.on(CHAT_LEAVED, ({ userId, members }) => {
+    onlineUsers.delete(userId.toString());
+
+    const membersSocket = getSockets(members);
+    io.to(membersSocket).emit(ONLINE_USERS, Array.from(onlineUsers));
+  });
 
   socket.on("disconnect", () => {
-    console.log("user disconnected");
     userSocketIDs.delete(user._id.toString());
+    onlineUsers.delete(user._id.toString());
+    socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 });
 
 app.use(errorMiddleware);
 
 server.listen(port, () => {
-  console.log(
-    `server is running on port http://localhost:${port} in ${envMode} mode`,
-  );
+  console.log(`Server is running on port ${port} in ${envMode} Mode`);
 });
 
-export { adminSecretKey, envMode, userSocketIDs };
+export { envMode, adminSecretKey, userSocketIDs };

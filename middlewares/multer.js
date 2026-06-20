@@ -8,7 +8,6 @@ import multer from 'multer'
 })
 
 const singleAvatar=multerUpload.single("avatar")
-// const attachmentsMulter =multerUpload.single("files",5)  //max file 5
 const attachmentsMulter = multerUpload.array("files", 5);
 
 export {singleAvatar, attachmentsMulter}
