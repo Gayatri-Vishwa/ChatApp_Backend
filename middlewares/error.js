@@ -1,10 +1,16 @@
 import { envMode } from "../app.js";
 
 const errorMiddleware = (err, req, res, next) => {
+
+    console.log("==========ERROR==========");
+  console.log(err);
+  console.log("err.message =", err.message);
+  console.log("typeof =", typeof err.message);
+
+
   err.message = err.message || "Internal server Error";
   err.statusCode ||= 500;
 
-  //    console.error(err)
 
   //duplicate username
   if (err.code === 11000) {
@@ -25,10 +31,16 @@ const errorMiddleware = (err, req, res, next) => {
     }
   }
 
+  // return res.status(err.statusCode).json({
+  //   success: false,
+  //   message: envMode === "DEVELOPMENT" ? err : err.message,
+  // });
+
   return res.status(err.statusCode).json({
-    success: false,
-    message: envMode === "DEVELOPMENT" ? err : err.message,
-  });
+  success: false,
+   message: err.message || "Something went wrong",  // ALWAYS STRING
+});
+
 };
 
 //this will retrun arrow func
@@ -44,3 +56,4 @@ const tryCatch = (passedFunc) => async (req, res, next) => {
 };
 
 export { errorMiddleware, tryCatch };
+

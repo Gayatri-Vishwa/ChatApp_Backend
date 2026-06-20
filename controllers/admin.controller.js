@@ -13,7 +13,9 @@ const adminLogin = tryCatch(async (req, resp, next) => {
 
     const isMatch=secretKey === adminSecretKey
 
-    if (!isMatch) return next(new Error("Invalid Secret Key",401));
+    // if (!isMatch) return next(new Error("Invalid Secret Key",401));
+    if (!isMatch)
+  return next(new ErrorHandler("Invalid Secret Key", 401));
 
 const token =jwt.sign( secretKey,process.env.ADMIN_SECRET_KEY)
 
