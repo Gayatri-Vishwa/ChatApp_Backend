@@ -30,8 +30,12 @@ router.route('/:id').get(chatIdValidator(),validateHandler,getChatDetails)
 .delete(chatIdValidator(),validateHandler,deleteChat)
 
 router.delete("/clear/:id", isAuthenticated, clearChat);
+
 router.get("/group/creator/:id", getGroupCreator);
 
 
 export default router
+
+
+
 

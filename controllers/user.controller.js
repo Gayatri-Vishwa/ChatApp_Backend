@@ -7,6 +7,8 @@ import { ErrorHandler } from "../utils/utility.js";
 import { Request } from "../models/request.model.js";
 import { NEW_REQUEST, REFETCH_CHATS } from "../constants/event.js";
 import { getOtherMember } from "../lib/helper.js";
+import { Notification } from "../models/notification.model.js";
+import mongoose from "mongoose";
 import {
   uploadFilesOnCloudinary,
   deleteFilesFromCloudinary,
@@ -207,27 +209,56 @@ const acceptFriendRequest = tryCatch(async (req, resp, next) => {
   });
 });
 
+
+//mine
+// const getAllNotifications = tryCatch(async (req, resp) => {
+//   const requests = await Request.find({ receiver: req.user }).populate(
+//     "sender",
+//     "name avatar",
+//   );
+
+//   const allRequests = requests.map(({ _id, sender }) => ({
+//     _id,
+//     sender: { _id: sender._id, name: sender.name, avatar: sender.avatar.url },
+//   }));
+
+//   return resp
+//     .status(200)
+
+//     .json({
+//       success: true,
+//       allRequests,
+//     });
+// });
+
+//this is not working properly i think there is some problem with the getOtherMember function in helper.js file
+
+
 const getAllNotifications = tryCatch(async (req, resp) => {
-  const requests = await Request.find({ receiver: req.user }).populate(
-    "sender",
-    "name avatar",
-  );
+
+  const requests = await Request.find({
+    receiver: req.user,
+  }).populate("sender", "name avatar");
 
   const allRequests = requests.map(({ _id, sender }) => ({
     _id,
-    sender: { _id: sender._id, name: sender.name, avatar: sender.avatar.url },
+    sender: {
+      _id: sender._id,
+      name: sender.name,
+      avatar: sender.avatar.url,
+    },
+    
   }));
 
-  return resp
-    .status(200)
 
-    .json({
-      success: true,
-      allRequests,
-    });
+  return resp.status(200).json({
+    success: true,
+    allRequests,
+    // notifications,
+  });
+
 });
 
-//this is not working properly i think there is some problem with the getOtherMember function in helper.js file
 const getMyFriends = tryCatch(async (req, resp) => {
   const chatId = req.query.chatId;
 
@@ -264,6 +295,62 @@ const getMyFriends = tryCatch(async (req, resp) => {
     });
   }
 });
+const getNotifications = tryCatch(async (req, res) => {
+
+  const notifications = await Notification.find({
+    receiver: req.user,
+    isRead: false,
+  }).populate("sender", "name avatar");
+
+  return res.status(200).json({
+    success: true,
+    notifications,
+  });
+
+});
+const markNotificationsAsRead = tryCatch(async (req, res) => {
+
+  await Notification.updateMany(
+    {
+      receiver: req.user,
+      isRead: false,
+    },
+    {
+      isRead: true,
+    }
+  );
+
+  res.status(200).json({
+    success: true,
+  });
+
+});
+
+
+const getUnreadMessages = tryCatch(async (req, res) => {
+    console.log("getUnreadMessages called");
+  const notifications = await Notification.aggregate([
+    {
+      $match: {
+        // `req.user` is set to the user's id by the auth middleware
+        receiver: new mongoose.Types.ObjectId(req.user),
+        type: "message",
+        isRead: false,
+      },
+    },
+    {
+      $group: {
+        _id: "$chat",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+console.log("user",req.user);
+  res.status(200).json({
+    success: true,
+    notifications,
+  });
+});
 
 export {
   login,
@@ -275,4 +362,31 @@ export {
   acceptFriendRequest,
   getAllNotifications,
   getMyFriends,
+getNotifications,
+  markNotificationsAsRead,
+  getUnreadMessages
 };
+
+
+
+
+// try {
+//   await Message.create(messageForDB);
+
+//   for (const member of members) {
+//     console.log("Member:", member);
+
+//     if (member.toString() === user._id.toString()) continue;
+
+//     const notification = await Notification.create({
+//       sender: user._id,
+//       receiver: member,
+//       type: "message",
+//       chat: chatId,
+//     });
+
+//     console.log("Notification created:", notification);
+//   }
+// } catch (error) {
+//   console.log(error);
+// }

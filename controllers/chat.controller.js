@@ -16,26 +16,8 @@ import {
 import { getOtherMember } from "../lib/helper.js";
 import { User } from "../models/user.model.js";
 import { Message } from "../models/message.model.js";
+import { Notification } from "../models/notification.model.js";
 
-// const newGroupChat = tryCatch(async (req, res, next) => {
-//   const { name, members } = req.body;
-
-//   const allMembers = [...members, req.user]; // my id also addedd here
-//   await Chat.create({
-//     name,
-//     groupChat: true,
-//     creator: req.user,
-//     members: allMembers,
-//   });
-
-//   emitEvent(req, ALERT, allMembers, `welcome to ${name} group`); //for all member
-//   emitEvent(req, REFETCHCHATS, members, `welcome `); //for my self
-
-//   return res.status(201).json({
-//     success: true,
-//     message: "Group created",
-//   });
-// });
 
 const newGroupChat = tryCatch(async (req, res, next) => {
   const { name, members } = req.body;
@@ -275,6 +257,26 @@ const sendAttachments = tryCatch(async (req, res, next) => {
   };
 
   const message = await Message.create(messageForDb);
+  // const message = await Message.create(messageForDb);
+
+  // create notifications for recipients (so offline users get unread alerts)
+  try {
+    const recipients = chat.members.filter(
+      (m) => m.toString() !== me._id.toString()
+    );
+
+    if (recipients.length > 0) {
+      const docs = recipients.map((r) => ({
+        sender: me._id,
+        receiver: r,
+        type: "message",
+        chat: chatId,
+      }));
+      await Notification.insertMany(docs);
+    }
+  } catch (err) {
+    console.warn("Failed to create notifications for attachments:", err);
+  }
 
   emitEvent(req, NEW_MESSAGE, chat.members, {
     message: messageForRealtime,
@@ -473,6 +475,8 @@ const getGroupCreator = tryCatch(async (req, res, next) => {
   });
 });
 
+
+
 export {
   newGroupChat,
   getMyChats,
@@ -487,4 +491,6 @@ export {
   getMessages,
   clearChat,
   getGroupCreator,
+ 
+ 
 };

@@ -41,10 +41,17 @@ const emitEvent =(req,event,users,data)=>{
   const io=req.app.get("io")
     console.log("EVENT:", event);
   console.log("USERS:", users);
-  const userSocket=getSockets(users)
+  const userSockets = getSockets(users);
+  console.log("SOCKETS:", userSockets);
 
-    console.log("SOCKETS:", userSocket);
-  io.to(userSocket).emit(event,data)
+  userSockets.forEach((sid) => {
+    try {
+      io.to(sid).emit(event, data);
+      console.log("[emitEvent] emitted", event, "to", sid);
+    } catch (err) {
+      console.warn("[emitEvent] failed to emit", event, "to", sid, err);
+    }
+  });
 
   
 }
