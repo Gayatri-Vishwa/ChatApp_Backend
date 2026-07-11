@@ -38,7 +38,7 @@ const newUser = tryCatch(async (req, resp, next) => {
 const login = tryCatch(async (req, resp, next) => {
   const { username, password } = req.body;
 
-  const user = await User.findOne({ username }).select("+password"); //password b select krna h
+  const user = await User.findOne({ username: username.trim().toLowerCase() }).select("+password"); //password b select krna h
 
   if (!user) {
     return next(new ErrorHandler("Invalid username ", 404));
