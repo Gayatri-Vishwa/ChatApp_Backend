@@ -17,8 +17,8 @@ import {
 // create  new user and save it to the database and save token in cookies
 //my
 const newUser = tryCatch(async (req, resp, next) => {
-  const { name, username, password, bio } = req.body;
-
+  let { name, username, password, bio } = req.body;
+username = username.trim().toLowerCase();
   const file = req.file;
 
   if (!file) return next(new ErrorHandler("Please upload Avatar"));
@@ -36,9 +36,9 @@ const newUser = tryCatch(async (req, resp, next) => {
 });
 
 const login = tryCatch(async (req, resp, next) => {
-  const { username, password } = req.body;
-
-  const user = await User.findOne({ username: username.trim().toLowerCase() }).select("+password"); //password b select krna h
+  let { username, password } = req.body;
+username = username.trim().toLowerCase();
+  const user = await User.findOne({ username}).select("+password"); //password b select krna h
 
   if (!user) {
     return next(new ErrorHandler("Invalid username ", 404));
