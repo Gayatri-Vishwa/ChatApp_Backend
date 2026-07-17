@@ -4,7 +4,6 @@ import { tryCatch } from "./error.js";
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-// import { tryCatch } from "./error.js";
 
 const isAuthenticated = tryCatch((req, res, next) => {
   const token = req.cookies["chattu-token"];

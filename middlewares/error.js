@@ -2,8 +2,6 @@ import { envMode } from "../app.js";
 
 const errorMiddleware = (err, req, res, next) => {
 
-    console.log("==========ERROR==========");
-  console.log(err);
   console.log("err.message =", err.message);
   console.log("typeof =", typeof err.message);
 

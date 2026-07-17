@@ -35,35 +35,6 @@ const createSingleChats=async(numChats)=>{
 }
 
 
-// const createGroupChat=async(numGroups)=>{
-//     try {
-//         const  users=await User.find().select("_id")
-//         const members=[]
-
-//         for(let i=0; i<users.length-1 ; i++){
-//             const numMembers=simpleFaker.number.int({min:3,max:users.length})
-//             const members=[]
-//             for(let j=0; j<numMembers ; j++){
-//                 const randomIndex=simpleFaker.number.int({min:0,max:users.length-1})
-//                const randomUser=users[randomIndex]
-//                 if(!members.includes(randomUser)){
-//                     members.push(randomUser)
-//                 }
-//             }
-//         }
-//         const chat =Chat.create({
-//             name:faker.lorem.words(1),
-//             creator:members[0],
-//             groupChat:true
-//         })
-
-//         console.log("group chats created successfully ",numGroups);
-//         process.exit(1)
-//     } catch (error) {
-//           console.log(error);
-//         process.exit(1)
-//     }
-// }
 
 
 const createGroupChat = async (numGroups) => {

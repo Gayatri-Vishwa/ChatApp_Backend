@@ -290,7 +290,7 @@ const sendAttachments = tryCatch(async (req, res, next) => {
   });
 });
 
-//mine
+
 const getChatDetails = tryCatch(async (req, res, next) => {
   if (req.query.populate === "true") {
     const chat = await Chat.findById(req.params.id)

@@ -12,13 +12,6 @@ const app=express.Router()
 app.post('/new',singleAvatar, registerValidator(),validateHandler,newUser) // register validator call because it returns array but validateHandler must be called after all the validators
 app.post('/login', loginValidator(),validateHandler,login) 
 
-// app.post(
-//   "/new",
-//   upload.single("avatar"),   // 👈 FIRST multer
-//   registerValidator(),
-//   validateHandler,
-//   controller
-// );
 
 //after here user must be loggedin to access the routes
 app.use(isAuthenticated)
